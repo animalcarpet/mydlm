@@ -5,7 +5,11 @@ A Data Lifetime Management (DLM) tool for MySQL.
 
 mydlm is intended as a tool for managing the summarization, pruning or archiving of
 data in MySQL, in fact any repeated task to ensure the proper stewardship of data over time
-within your MySQL databases. 
+within your MySQL databases. At present, the codebase only covers the backend tasks
+and is implemented as MySQL stored procedures. mydlm could be run entirely as a back end
+process, however, much of the administration of processes and the monitoring would
+be considerably easier with a suitable frontend interface calling and consuming those
+procedures.
 
 Data is managed by jobs that define the type, dependencies, payload and schedule for
 running and monitoring DLM tasks. A job may have as its payload any single statement
@@ -44,21 +48,27 @@ allows the policy to be set up some time in advance when the table is first
 created and when you might be weeks, months or even years from the need to run DLM
 processes.
 
+### Job Types
+The following types are currectly supported. Only the One-off type has a effect on
+the way the job will be run.
+* Summarisation
+* Archiving
+* Pruning
+* DDL task
+* Updating
+* One-Off
+
+
+
 
 ### Job Definition
 A job record defines
-The table identifier
-A name for the job
-The type of operation
-  Summarisation
-  Archiving
-  Pruning
-  DDL task
-  Updating
-  One-Off
-The query (a definition of the statement to run)
-The schedule for running the policy expressed in a cron-like format
-The specification of a dependency which must be successfully completed before running the job
+* The table identifier
+* A name for the job
+* The type of operation
+* The query (a definition of the statement to run)
+* The schedule for running the policy expressed in a cron-like format
+* The specification of a dependency which must be successfully completed before running the job
 
 ### Statement definition
 mydlm makes no assumption nor imposes any restrictions on the statements that can be 
@@ -161,4 +171,21 @@ Row counts are estimates from `information_schema`.`tables` as counting actual r
 would be too slow for very large tables. The point of this feature is to get an
 overall impression of the number of rows, the precise figure is not that important.
 
-### Auto-activation of jobs
+
+### Events
+mydlm uses MySQL's EVENTS to automate the selection and running of jobs.
+
+The queuing EVENT runs every minute, this corresponds with the way that a cron process
+will initiate tasks against a predefined schedule.
+
+The job runner EVENT should run at a frequency that is capable of keeping pace with
+the queue. The EVENT will check for a runnable job, this is a very fast check against
+a table with very few rows. The frequency for this EVENT can be adjusted up or down
+as appropriate.
+
+The activation check EVENT tests to see whether a job should be considered 'active'
+because the data has aged sufficiently to have reached its data retention threshold.
+It doe this by testing a timestamp of the oldest record. If the threshold has
+passed the job is set 'active' and will be queued to run against the defined schedule.
+
+
