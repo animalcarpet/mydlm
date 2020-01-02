@@ -1512,3 +1512,71 @@ GROUP BY 1,2,3,4,5,6
 ORDER BY 7 DESC;
 END //
 DELIMITER ;
+
+-- HISTORY BY JOB TYPE
+DROP PROCEDURE IF EXISTS `history_by_job_type`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_by_job_type`(
+  _table_id MEDIUMINT UNSIGNED,
+  _job_type_id TINYINT UNSIGNED)
+DETERMINISTIC
+SQL SECURITY INVOKER 
+CONTAINS SQL
+BEGIN
+SELECT h.`runtime`,jt.`job_type_name`,h.`rows_affected`, h.`started`, h.`finished`
+FROM `mydlm`.`history` h
+JOIN `mydlm`.`jobs` j USING(`job_id`)
+JOIN `mydlm`.`job_types` jt USING(`job_type_id`)
+WHERE j.`table_id` = _table_id
+AND j.`job_type_id` = _job_type_id;
+END //
+DELIMITER ;
+
+-- HISTORY BY JOB TYPE/PERIOD
+DROP PROCEDURE IF EXISTS `history_summary_by_period`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_summary_by_period`(
+  _table_id MEDIUMINT UNSIGNED,
+  _job_type_id TINYINT UNSIGNED,
+  _interval CHAR(5))
+DETERMINISTIC
+SQL SECURITY INVOKER 
+CONTAINS SQL
+BEGIN
+-- takes day,week,month,year buckets
+SELECT CASE _interval
+  WHEN 'day' THEN DATE(h.`runtime`)
+  WHEN 'week' THEN YEARWEEK(h.`runtime`)
+  WHEN 'month' THEN EXTRACT(YEAR_MONTH FROM h.`runtime`)
+  WHEN 'year' THEN YEAR(h.`runtime`) END,
+  jt.`job_type_name`, SUM(h.`rows_affected`)
+FROM `mydlm`.`history` h
+JOIN `mydlm`.`jobs` j USING(`job_id`)
+JOIN `mydlm`.`job_types` jt USING(`job_type_id`)
+WHERE j.`table_id` = _table_id
+AND j.`job_type_id` = _job_type_id
+GROUP BY 1,2;
+END //
+DELIMITER ;
+
+
+-- HISTORY EXECUTION TIME
+DROP PROCEDURE IF EXISTS `history_execution_time`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_execution_time`(
+  _table_id MEDIUMINT UNSIGNED,
+  _job_type_id TINYINT UNSIGNED)
+DETERMINISTIC
+SQL SECURITY INVOKER 
+CONTAINS SQL
+BEGIN
+-- takes day,week,month,year buckets
+SELECT h.`job_id`, h.`runtime`, j.`job_name`, jt.`job_type_name`,
+h.`rows_affected`, TIMEDIFF(h.`started`, h.`finished`)
+FROM `mydlm`.`history` h
+JOIN `mydlm`.`jobs` j USING(`job_id`)
+JOIN `mydlm`.`job_types` jt USING(`job_type_id`)
+WHERE j.`table_id` = _table_id
+AND j.`job_type_id` = _job_type_id;
+END //
+DELIMITER ;
