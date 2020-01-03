@@ -1,10 +1,8 @@
 -- A utility to manage data lifetime
-DROP DATABASE mydlm;
-
 CREATE DATABASE IF NOT EXISTS `mydlm`;
 USE `mydlm`
 
-CREATE TABLE `schemata` (
+CREATE TABLE IF NOT EXISTS `schemata` (
   `schema_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `schema_name` VARCHAR(64) NOT NULL,
   `created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -14,7 +12,7 @@ CREATE TABLE `schemata` (
   COMMENT 'Record each database under management';
 
 
-CREATE TABLE `tables` (
+CREATE TABLE IF NOT EXISTS `tables` (
   `table_id` MEDIUMINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `schema_id` SMALLINT UNSIGNED NOT NULL,
   `table_name` VARCHAR(64) NOT NULL,
@@ -30,7 +28,7 @@ CREATE TABLE `tables` (
   COMMENT 'Record each table under management';
 
 
-CREATE TABLE `job_types` (
+CREATE TABLE IF NOT EXISTS `job_types` (
  `job_type_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
  `job_type_name` VARCHAR(12) NOT NULL,
  PRIMARY KEY (`job_type_id`),
@@ -40,26 +38,26 @@ CREATE TABLE `job_types` (
 
 
 -- The self-referencing FK is a bit strange here.
--- We want tomake sure we don't delete dependent
--- jobs via a cascade, but the FK prevents the
+-- We want to make sure we don't delete dependent
+-- jobs via a cascade, but the FK prevents any
 -- deletion of records. We suspend FK checks for a
 -- delete to get around this issue. The other option
 -- would be to store dependent ids in a separate
 -- table, but I didn't feel I needed more than 1
 -- dependency for a table.
 
-CREATE TABLE `jobs` (
+CREATE TABLE  IF NOT EXISTS `jobs` (
   `job_id` INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
   `table_id` MEDIUMINT UNSIGNED NOT NULL, 
   `job_type_id` TINYINT UNSIGNED NOT NULL,
   `depends` INTEGER UNSIGNED,
   `job_name` VARCHAR(64) NOT NULL,
-  `query` TINYTEXT NOT NULL,
-  `mi` CHAR(24) NOT NULL DEFAULT '*',
-  `hr` CHAR(24) NOT NULL DEFAULT '*',
-  `dm` CHAR(24) NOT NULL DEFAULT '*',
-  `mn` CHAR(24) NOT NULL DEFAULT '*',
-  `dw` CHAR(24) NOT NULL DEFAULT '*',
+  `query` TEXT NOT NULL,
+  `mi` CHAR(33) NOT NULL DEFAULT '*',
+  `hr` CHAR(33) NOT NULL DEFAULT '*',
+  `dm` CHAR(33) NOT NULL DEFAULT '*',
+  `mn` CHAR(33) NOT NULL DEFAULT '*',
+  `dw` CHAR(33) NOT NULL DEFAULT '*',
   `active` TINYINT NOT NULL DEFAULT '0',
   `created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY(`job_id`),
@@ -73,7 +71,7 @@ CREATE TABLE `jobs` (
   COMMENT 'The definition and schedule of each DLM task';
 
 
-CREATE TABLE `queue` (
+CREATE TABLE IF NOT EXISTS `queue` (
   `job_id` INTEGER UNSIGNED NOT NULL,
   `runtime` DATETIME NOT NULL,
   `semaphore` TINYINT UNSIGNED NOT NULL DEFAULT 0,
@@ -84,7 +82,7 @@ CREATE TABLE `queue` (
   COMMENT 'Queue the jobs till successfully completed';
 
 
-CREATE TABLE `history` (
+CREATE TABLE IF NOT EXISTS `history` (
   `job_id` INTEGER UNSIGNED NOT NULL,
   `runtime` DATETIME NOT NULL,
   `rows_affected` INTEGER DEFAULT NULL,
@@ -100,7 +98,7 @@ CREATE TABLE `history` (
   COMMENT 'Outcome of each job';
 
 
-CREATE TABLE `monitor` (
+CREATE TABLE IF NOT EXISTS `monitor` (
   `table_id` MEDIUMINT UNSIGNED NOT NULL,
   `table_rows` BIGINT UNSIGNED NOT NULL,
   `auto_increment` BIGINT UNSIGNED,
