@@ -73,7 +73,6 @@ SELECT tap.eq((SELECT table_name,personal,financial,retain_days,retain_key
   WHERE schema_name = 'test_mydlm_1' AND table_name = 'table_4')
     = ('table_4',0,0,7,'ts'), NULL,'record should not exist');
 
-5
 -- will not match so false
 SELECT tap.eq((SELECT table_name,personal,financial,retain_days,retain_key
   FROM mydlm.tables JOIN mydlm.schemata USING(schema_id)
@@ -135,9 +134,13 @@ CALL mydlm.insert_job('test4 - Prune',2,@table_id,
 '0,15,30,45','*','*','*','*',1,@dependency,@rtn);
 SELECT tap.eq(@rtn,1,'insert_job() should succeed');
 
+
+-- this might not work because of secure_file_priv setting
+-- select @@global.secure_file_priv;
+-- and change if necessary
 SET @rtn = NULL;
 CALL mydlm.insert_job('test5 - Archive',3,@table_id,
-'SELECT a,b,ts INTO OUTFILE "/tmp/table1@@DATE@@@@TIME@@"
+'SELECT a,b,ts INTO OUTFILE "/var/lib/mysql-files/table1@@DATE@@@@TIME@@"
 FROM test_mydlm_1.table_1',
 '*','*','*','*','*',1,null,@rtn);
 SELECT tap.eq(@rtn,1,'insert_job() should succeed');
