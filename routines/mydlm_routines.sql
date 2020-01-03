@@ -1050,7 +1050,7 @@ main:BEGIN
 
   CALL `mydlm`.`log`(_job_id,_runtime,_rows_affected,_started,_finished,NULL);
 
-  IF _job_type_id = 6 THEN
+  IF _job_type_id = 1 THEN
     CALL `mydlm`.`suspend_job`(_job_id, @discard);
   END IF;
 
