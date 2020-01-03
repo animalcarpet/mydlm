@@ -426,7 +426,9 @@ DETERMINISTIC
 SQL SECURITY INVOKER 
 CONTAINS SQL
 BEGIN
-
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    SET _row_count = NULL;
+    
   INSERT INTO `mydlm`.`schemata` (`schema_name`)
   SELECT `schema_name`
   FROM `information_schema`.`schemata` 
@@ -437,7 +439,7 @@ END //
 DELIMITER ;
 
 
--- check the table exists in the table
+-- check the table exists in the db
 DROP PROCEDURE IF EXISTS `insert_table`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_table`(
@@ -452,13 +454,17 @@ DETERMINISTIC
 SQL SECURITY INVOKER 
 CONTAINS SQL
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    SET _row_count = NULL;
+
   INSERT INTO `mydlm`.`tables` (`schema_id`, `table_name`,
     `personal`, `financial`, `retain_days`, `retain_key`)
   SELECT s.`schema_id`, t.`table_name`, _personal, _financial,
     _retain_days, _retain_key
   FROM `information_schema`.`tables` t
   JOIN `mydlm`.`schemata` s ON(t.`table_schema` = s.`schema_name`)
-  WHERE t.`table_schema` = _table_schema;
+  WHERE t.`table_schema` = _table_schema
+  AND t.`table_name` = _table_name;
 
   SET _row_count = ROW_COUNT();
 END //
@@ -474,6 +480,9 @@ DETERMINISTIC
 SQL SECURITY INVOKER 
 CONTAINS SQL
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    SET _row_count = NULL;
+
   INSERT INTO `mydlm`.`job_types` (`job_type_name`)
   VALUES(_job_type_name);
 
@@ -488,12 +497,12 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_job`(
   IN _job_name VARCHAR(64),
   IN _job_type_id TINYINT UNSIGNED,
   IN _table_id MEDIUMINT UNSIGNED,
-  IN _query TINYTEXT,
-  IN _mi CHAR(24),
-  IN _hr CHAR(24),
-  IN _dm CHAR(24),
-  IN _mn CHAR(24),
-  IN _dw CHAR(24),
+  IN _query TEXT,
+  IN _mi CHAR(33),
+  IN _hr CHAR(33),
+  IN _dm CHAR(33),
+  IN _mn CHAR(33),
+  IN _dw CHAR(33),
   IN _active TINYINT,
   IN _depends INTEGER UNSIGNED,
   OUT _row_count INTEGER UNSIGNED)
@@ -501,9 +510,13 @@ DETERMINISTIC
 SQL SECURITY INVOKER 
 CONTAINS SQL
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    SET _row_count = NULL;
+
   INSERT INTO `mydlm`.`jobs` (
     `job_name`,
     `job_type_id`,
+    `table_id`,
     `query`,
     `mi`,
     `hr`,
@@ -515,7 +528,8 @@ BEGIN
   )
   VALUES (
     _job_name,
-    _job_type,
+    _job_type_id,
+    _table_id,
     _query,
     _mi,
     _hr,
@@ -634,12 +648,12 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_job`(
   IN _job_name VARCHAR(64),
   IN _job_type_id TINYINT UNSIGNED,
   IN _table_id MEDIUMINT UNSIGNED,
-  IN _query TINYTEXT,
-  IN _mi CHAR(24),
-  IN _hr CHAR(24),
-  IN _dm CHAR(24),
-  IN _mn CHAR(24),
-  IN _dw CHAR(24),
+  IN _query TEXT,
+  IN _mi CHAR(33),
+  IN _hr CHAR(33),
+  IN _dm CHAR(33),
+  IN _mn CHAR(33),
+  IN _dw CHAR(33),
   IN _active TINYINT,
   IN _depends INTEGER UNSIGNED,
   OUT _row_count INTEGER UNSIGNED)
@@ -1016,10 +1030,11 @@ main:BEGIN
   WHERE `job_id` = _job_id AND `runtime` = _runtime;
 
   -- macro replacement
-  SET @query = REPLACE(@query,'@@DATE@@',DATE_FORMAT(_runtime,'%Y_%m_%d'));
-  SET @query = REPLACE(@query,'@@YEARWEEK@@',DATE_FORMAT(_runtime,'%X_%V'));
-  SET @query = REPLACE(@query,'@@YEARMONTH@@',DATE_FORMAT(_runtime,'%Y_%m'));
+  SET @query = REPLACE(@query,'@@DATE@@',DATE_FORMAT(_runtime,'%Y%m%d'));
+  SET @query = REPLACE(@query,'@@YEARWEEK@@',DATE_FORMAT(_runtime,'%X%V'));
+  SET @query = REPLACE(@query,'@@YEARMONTH@@',DATE_FORMAT(_runtime,'%Y%m'));
   SET @query = REPLACE(@query,'@@YEAR@@',DATE_FORMAT(_runtime,'%Y'));
+  SET @query = REPLACE(@query,'@@TIME@@',DATE_FORMAT(_runtime,'%H%i%s'));
 
   PREPARE _stmt FROM @query;
   IF LOCATE('?', @query) > 0 THEN
