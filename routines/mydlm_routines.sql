@@ -892,6 +892,11 @@ BEGIN
   FROM
    (SELECT 1
     FROM `mydlm`.`queue` q
+    WHERE j.`job_id` = _job_id
+      AND q.runtime < _runtime
+    UNION
+    SELECT 1
+    FROM `mydlm`.`queue` q
     JOIN `mydlm`.`jobs` j ON(q.`job_id` = j.`depends`)
     WHERE j.`job_id` = _job_id
       AND q.runtime <= _runtime
