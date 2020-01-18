@@ -10,7 +10,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `import_schemata`(
   OUT _row_count INTEGER)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   INSERT INTO `mydlm`.`schemata` (`schema_name`)
   SELECT `schema_name`
@@ -30,7 +30,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `import_tables`(
   _row_count SMALLINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   INSERT INTO `mydlm`.`tables` (`table_name`,`schema_id`)
   SELECT t.`table_name`, s.`schema_id`
@@ -52,7 +52,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `import_table`(
   _row_count SMALLINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   INSERT INTO `mydlm`.`tables` (`table_name`,`schema_id`)
   SELECT t.`table_name`, s.`schema_id`
@@ -74,9 +74,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_schemata`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_schemata`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `schema_id`, s.`schema_name`, s.`created`
    FROM `mydlm`.`schemata` s;
@@ -88,9 +87,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_tables`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_tables`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT t.`table_id`, t.`table_name`, `schema_id`, s.`schema_name`,
     t.`personal`, t.`financial`, t.`retain_days`, t.`retain_key`, t.`created`
@@ -104,9 +102,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_job_types`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_job_types`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_type_id`, `job_type_name`
    FROM `mydlm`.`job_types`;
@@ -118,9 +115,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_jobs`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_jobs`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT j.`job_id`, j.`job_name`, j.`job_type_id`, jt.`job_type_name`,
     j.`query`, j.`mi`, j.`hr`, j.`dm`, j.`mn`, j.`dw`,j.`active`,
@@ -137,9 +133,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_queue`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_queue`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, q.`runtime`, s.`schema_name`, t.`table_name`,
     j.`job_name`, jt.`job_type_name`,`semaphore`
@@ -157,9 +152,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_history`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_history`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, h.`runtime`, s.`schema_name`, t.`table_name`,
     j.`job_name`, jt.`job_type_name`, h.`rows_affected`,
@@ -181,9 +175,8 @@ DROP PROCEDURE IF EXISTS `get_queue_by_runtime`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_queue_by_runtime`(
   _runtime DATETIME)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, `runtime`, s.`schema_name`, t.`table_name`, j.`job_name`,
      jt.`job_type_name`
@@ -201,9 +194,8 @@ DROP PROCEDURE IF EXISTS `get_queue_by_job_id`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_queue_by_job_id`(
   _job_id INTEGER UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, `runtime`, s.`schema_name`, t.`table_name`, j.`job_name`,
      jt.`job_type_name`
@@ -222,9 +214,8 @@ DROP PROCEDURE IF EXISTS `get_tables_by_schema_id`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_tables_by_schema_id`(
   _schema_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT t.`table_id`, t.`table_name`, `schema_id`, s.`schema_name`,
     t.`personal`, t.`financial`, t.`retain_days`, t.`retain_key`, t.`created`
@@ -240,9 +231,8 @@ DROP PROCEDURE IF EXISTS `get_tables_by_schema_name`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_tables_by_schema_name`(
   _table_schema VARCHAR(64))
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT t.`table_id`, t.`table_name`, `schema_id`, s.`schema_name`,
     t.`personal`, t.`financial`, t.`retain_days`, t.`retain_key`, t.`created`
@@ -258,9 +248,8 @@ DROP PROCEDURE IF EXISTS `get_jobs_by_schema_id`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_jobs_by_schema_id`(
   _schema_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT j.`job_id`, j.`job_name`, `schema_id`, s.`schema_name`,
     `table_id`, t.`table_name`,jt.job_type_id, jt.`job_type_name`,
@@ -280,9 +269,8 @@ DROP PROCEDURE IF EXISTS `get_jobs_by_table_id`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_jobs_by_table_id`(
   _table_id MEDIUMINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT j.`job_id`, j.`job_name`, `schema_id`, s.`schema_name`,
     `table_id`, t.`table_name`,jt.job_type_id, jt.`job_type_name`,
@@ -302,9 +290,8 @@ DROP PROCEDURE IF EXISTS `get_history_by_job_id`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_history_by_job_id`(
   _job_id INTEGER UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, h.`runtime`, j.`job_name`, jt.`job_type_name`,
     h.`rows_affected`, h.`error`, h.`started`, h.`finished`, h.`created`
@@ -324,9 +311,8 @@ DROP PROCEDURE IF EXISTS `get_schema`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_schema`(
   _schema_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `schema_id`, s.`schema_name`, s.`created`
    FROM `mydlm`.`schemata` s
@@ -340,9 +326,8 @@ DROP PROCEDURE IF EXISTS `get_table`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_table`(
   _table_id MEDIUMINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT t.`table_id`, t.`table_name`, `schema_id`, s.`schema_name`,
     t.`personal`, t.`financial`, t.`retain_days`, t.`retain_key`, t.`created`
@@ -359,9 +344,8 @@ DROP PROCEDURE IF EXISTS `get_job_type`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_job_type`(
   _job_type_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_type_id`, `job_type_name`
    FROM `mydlm`.`job_types`
@@ -375,9 +359,8 @@ DROP PROCEDURE IF EXISTS get_job;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE get_job(
   _job_id INTEGER UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT j.`job_id`, j.`job_name`, jt.job_type_id, jt.`job_type_name`,
     j.`query`, j.`mi`, j.`hr`, j.`dm`, j.`mn`, j.`dw`, j.`active`,
@@ -395,9 +378,8 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_history_by_job_id_and_runtime`(
   _job_id INTEGER UNSIGNED,
   _runtime DATETIME)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT `job_id`, h.`runtime`, s.`schema_name`, t.`table_name`,
     j.`job_name`, jt.`job_type_name`, h.`rows_affected`,
@@ -423,8 +405,8 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_schema`(
   IN _schema_name VARCHAR(64),
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
-SQL SECURITY INVOKER 
-CONTAINS SQL
+SQL SECURITY INVOKER
+MODIFIES SQL DATA
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
     SET _row_count = NULL;
@@ -452,7 +434,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_table`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
     SET _row_count = NULL;
@@ -478,7 +460,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_job_type`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
     SET _row_count = NULL;
@@ -508,7 +490,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_job`(
   OUT _row_count INTEGER UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DECLARE EXIT HANDLER FOR SQLEXCEPTION
     SET _row_count = NULL;
@@ -555,7 +537,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `insert_history`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   INSERT INTO `mydlm`.`history` (`job_id`,`runtime`)
   VALUES (_job_id, _runtime);
@@ -577,9 +559,8 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_schema`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
-
   UPDATE `mydlm`.`schemata`
   SET `schema_name` = 
     (SELECT i.`schema_name`
@@ -606,7 +587,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_table`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`tables` SET
     `schema_id` =  _schema_id,
@@ -630,7 +611,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_job_type`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`job_types` SET
     `job_type_name` = _job_type_name
@@ -659,7 +640,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_job`(
   OUT _row_count INTEGER UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`jobs` SET
     `job_name` = _job_name,
@@ -694,7 +675,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `update_history`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`history` SET
     `rows_affected` = _rows_affected,
@@ -719,7 +700,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_job_type`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`job_types`
   WHERE `job_type_id` = _job_type_id;
@@ -736,7 +717,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_schema`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`schemata`
   WHERE s.`schema_id` = _schema_id;
@@ -753,7 +734,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_table`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`tables`
   WHERE `table_id` = _table_id;
@@ -770,7 +751,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_job`(
   OUT _row_count INTEGER UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   SET FOREIGN_KEY_CHECKS = 0;
 
@@ -791,7 +772,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_history`(
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`history`
   WHERE `job_id`  = _job_id
@@ -809,9 +790,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_dependent_queue_jobs`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_dependent_queue_jobs`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT q1.`job_id` 'stuck', q1.`runtime`, j1.`job_name`, jt1.`job_type_name`,
     q2.`job_id` 'depends' , q2.`runtime`, j2.`job_name`, jt2.`job_type_name`
@@ -833,7 +813,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `queue_job`(
   _runtime DATETIME)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 COMMENT 'Put a job instance on the queue'
 BEGIN
   START TRANSACTION;
@@ -856,7 +836,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `log` (
   _error TEXT)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   START TRANSACTION;
     DELETE FROM `mydlm`.`queue` WHERE `job_id` = _job_id AND `runtime` = _runtime;   
@@ -882,9 +862,8 @@ CREATE DEFINER='dlmadmin'@'localhost' FUNCTION `is_runable` (
   _job_id INTEGER UNSIGNED,
   _runtime DATETIME)
 RETURNS BOOLEAN
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   DECLARE rtn INTEGER UNSIGNED;
   
@@ -921,9 +900,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `queue_jobs`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `queue_jobs` ()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   START TRANSACTION;
 
@@ -978,7 +956,7 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `run_job` ()
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 main:BEGIN
   DECLARE _started DATETIME;
   DECLARE _finished DATETIME;
@@ -1074,7 +1052,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `dequeue_job` (
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`queue`
   WHERE `job_id` = _job_id AND `runtime` = _runtime;
@@ -1091,7 +1069,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `deactivate_job` (
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`jobs`
   SET `active` = 0
@@ -1109,7 +1087,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `reactivate_job` (
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`jobs`
   SET `active` = 1
@@ -1127,7 +1105,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `suspend_job` (
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`jobs`
   SET `active` = -1
@@ -1145,7 +1123,7 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `close_error` (
   OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   UPDATE `mydlm`.`jobs`
   SET `active` = 1
@@ -1160,9 +1138,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `activation_check`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `activation_check`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   DECLARE _schema_name VARCHAR(64);
   DECLARE _table_name VARCHAR(64);
@@ -1224,7 +1201,7 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `monitor_tables`()
 DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+MODIFIES SQL DATA
 BEGIN
   INSERT INTO `mydlm`.`monitor`(`table_id`,`table_rows`,`auto_increment`,`keyspace`)
   SELECT m.`table_id`,t.`table_rows`,t.`auto_increment`,
@@ -1258,9 +1235,8 @@ DROP PROCEDURE IF EXISTS get_monitor_data_by_table;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE get_monitor_data_by_table(
   _table_id MEDIUMINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT s.`schema_name`, t.`table_name`, m.`table_rows`,
     m.`auto_increment`, m.`keyspace`, m.`created`
@@ -1276,9 +1252,8 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `get_monitor_data`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `get_monitor_data`()
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT s.`schema_name`, t.`table_name`, m.`table_rows`,
     m.`auto_increment`, m.`keyspace`, m.`created`
@@ -1294,9 +1269,8 @@ DROP PROCEDURE IF EXISTS `keyspace_alert`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `keyspace_alert`(
   _threshold TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
   SELECT s.`schema_name`, t.`table_name`, m.`table_rows`,
     m.`auto_increment`, m.`keyspace`, m.`created`
@@ -1315,9 +1289,8 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `keyspace_growth`(
   _table_id MEDIUMINT UNSIGNED,
   _days SMALLINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
 SELECT m2.mdate AS 'Sample 1',m1.mdate 'Sample 2 ',m2.autoinc AS 'Keys sample 1',
   m1.autoinc AS 'Keys sample 2',(m1.autoinc - m2.autoinc) AS 'Growth'
@@ -1343,9 +1316,8 @@ DROP PROCEDURE IF EXISTS `fastest_growth`;
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `fastest_growth`(
   _days SMALLINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
 SELECT s.`schema_name`, t.`table_name`, m2.mdate AS 'Sample 1',
   m1.mdate 'Sample 2 ',m2.autoinc AS 'Keys sample 1',
@@ -1374,9 +1346,8 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_by_job_type`(
   _table_id MEDIUMINT UNSIGNED,
   _job_type_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
 SELECT h.`runtime`,jt.`job_type_name`,h.`rows_affected`, h.`started`, h.`finished`
 FROM `mydlm`.`history` h
@@ -1394,9 +1365,8 @@ CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_summary_by_period`(
   _table_id MEDIUMINT UNSIGNED,
   _job_type_id TINYINT UNSIGNED,
   _interval CHAR(5))
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
 -- takes day,week,month,year buckets
 SELECT CASE _interval
@@ -1421,9 +1391,8 @@ DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `history_execution_time`(
   _table_id MEDIUMINT UNSIGNED,
   _job_type_id TINYINT UNSIGNED)
-DETERMINISTIC
 SQL SECURITY INVOKER 
-CONTAINS SQL
+READS SQL DATA
 BEGIN
 -- takes day,week,month,year buckets
 SELECT h.`job_id`, h.`runtime`, j.`job_name`, jt.`job_type_name`,
