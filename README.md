@@ -196,3 +196,7 @@ It dose this by testing a timestamp of the oldest record. If the threshold has
 passed the job is set 'active' and will be queued to run against the defined schedule.
 
 
+### Replication
+mydlm can be used in replication environments where the replication format is set to
+either ROW or MIXED. It cannot be used with STATEMENT based replication and will issue
+an error when you try to import the procedures because some procedures are non-deterministic.
