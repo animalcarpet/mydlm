@@ -238,7 +238,7 @@ BEGIN
     t.`personal`, t.`financial`, t.`retain_days`, t.`retain_key`, t.`created`
    FROM `mydlm`.`tables` t
    JOIN `mydlm`.`schemata` s USING(`schema_id`)
-   WHERE t.`table_schema` = _table_schema;
+   WHERE s.`schema_name` = _table_schema;
 END //
 DELIMITER ;
 
@@ -1452,3 +1452,43 @@ WHERE j.`table_id` = _table_id
 AND j.`job_type_id` = _job_type_id;
 END //
 DELIMITER ;
+
+
+
+
+-- INTERFACE ELEMENTS
+-- ******************************************************************************************
+
+DROP PROCEDURE IF EXISTS `unmanaged_schemata`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `unmanaged_schemata`()
+SQL SECURITY INVOKER 
+READS SQL DATA
+BEGIN
+-- just those not already managed
+SELECT s.`schema_name`
+FROM `information_schema`.`schemata` s
+LEFT JOIN `mydlm`.`schemata` m USING(`schema_name`)
+WHERE m.`schema_name` IS NULL
+AND s.`schema_name` NOT IN('mysql','sys','information_schema','performance_schema');
+END //
+DELIMITER ;
+
+DROP PROCEDURE IF EXISTS `unmanaged_tables`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `unmanaged_tables`(_schema_name VARCHAR(64))
+SQL SECURITY INVOKER 
+READS SQL DATA
+BEGIN
+-- just those not already managed
+SELECT t.`table_name`
+FROM `information_schema`.`schemata` s
+JOIN `information_schema`.`tables` t ON (s.`schema_name` = t.`table_schema`)
+JOIN `mydlm`.`schemata` s2 ON (s.`schema_name` = s2.`schema_name`) 
+LEFT JOIN `mydlm`.`tables` t2 ON(s2.`schema_id` = t2.`schema_id` AND t2.`table_name` = t.`table_name`)
+WHERE t2.`table_name` IS NULL
+AND s.`schema_name` = _schema_name;
+END //
+DELIMITER ;
+
+
