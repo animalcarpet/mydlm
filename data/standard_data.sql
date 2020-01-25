@@ -5,7 +5,7 @@ Copyright: Paul Campbell <animalcarpet@gmail.com>
 Licence: GPL
 */
 
--- populate lookup tables
+-- populate lookup tables and master control
 
 USE mydlm
 
@@ -17,3 +17,7 @@ VALUES (1,'One-off'),
        (5,'DDL'),
        (6,'Update'),
        (7,'Ad hoc');
+
+
+INSERT INTO `mydlm`.`control` (`created`,`run`) 
+VALUES (NULL,1);
