@@ -1,9 +1,10 @@
 -- NB With the exception of routines, this shouldn't update
 -- an existing installation
 
-SOURCE ../schema/mydlm.sql
-SOURCE ../routines/mydlm_routines.sql
-SOURCE ../data/standard_data.sql
+-- SOURCE ../schema/mydlm.sql
+-- SOURCE ../routines/mydlm_routines.sql
+-- SOURCE ../routines/mydlm_events.sql
+-- SOURCE ../data/standard_data.sql
 
 DROP DATABASE IF EXISTS `test_mydlm_1`;
 CREATE DATABASE `test_mydlm_1`;
@@ -45,12 +46,11 @@ CALL mydlm.insert_schema('test_mydlm_3',@rtn);
 SELECT tap.eq(@rtn,0,'insert_schema() non-existent db should return 0');
 
 SELECT tap.eq((SELECT schema_name FROM mydlm.schemata where schema_name = 'test_mydlm_1') = ('test_mydlm_1'),
-  TRUE,'record should exist');
+  TRUE,'test_mydlm_1 schema record should exist');
 SELECT tap.eq((SELECT schema_name FROM mydlm.schemata where schema_name = 'test_mydlm_2') = ('test_mydlm_2'),
-  TRUE,'record should exist');
+  TRUE,'test_mydlm_2 schema record should exist');
 SELECT tap.eq((SELECT schema_name FROM mydlm.schemata where schema_name = 'test_mydlm_3') = ('test_mydlm_3'),
-  FALSE,'record should not exist');
-
+  NULL,'test_mydlm_3 schema record should not exist');
 -- insert_table
 SET @rtn = NULL;
 CALL mydlm.insert_table('test_mydlm_1','table_1',1,1,365,'ts',@rtn);
@@ -80,16 +80,6 @@ SELECT tap.eq((SELECT table_name,personal,financial,retain_days,retain_key
     = ('table_1',1,1,7,'ts'),FALSE,'record should not match');
 
 -- jobs
-
-SET @rtn = NULL;
-CALL mydlm.insert_job('test_mydlm_1','table_1',1,1,365,'ts',@rtn);
-SELECT tap.eq(@rtn,1,'insert_table() should succeed, returning 1');
-SET @rtn = NULL;
-CALL mydlm.insert_table('test_mydlm_1','table_1',1,1,365,'ts',@rtn);
-SELECT tap.eq(@rtn,NULL,'insert_table() with duplicate name should fail');
-SET @rtn = NULL;
-CALL mydlm.insert_table('test_mydlm_1','table_4',0,0,7,'ts',@rtn);
-SELECT tap.eq(@rtn,0,'insert_table() non-existent table should return 0');
 
 SET @table_id = (SELECT table_id
  FROM mydlm.tables t
@@ -130,7 +120,7 @@ FROM mydlm.jobs
 WHERE job_name = 'test3 - Summarize');
 
 CALL mydlm.insert_job('test4 - Prune',2,@table_id,
-'DELETE FROM test_mydlm.table_1 WHERE ts < ?',
+'DELETE FROM test_mydlm_1.table_1 WHERE ts < ?',
 '0,15,30,45','*','*','*','*',1,@dependency,@rtn);
 SELECT tap.eq(@rtn,1,'insert_job() should succeed');
 
@@ -146,3 +136,6 @@ FROM test_mydlm_1.table_1',
 SELECT tap.eq(@rtn,1,'insert_job() should succeed');
 
 
+DROP DATABASE IF EXISTS `test_mydlm_1`;
+DROP DATABASE IF EXISTS `test_mydlm_2`;
+DROP DATABASE IF EXISTS `test_mydlm_3`;

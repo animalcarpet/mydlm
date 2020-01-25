@@ -2,6 +2,15 @@
 CREATE DATABASE IF NOT EXISTS `mydlm`;
 USE `mydlm`
 
+
+CREATE TABlE IF NOT EXISTS `control` (
+  `created` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, 
+  `run` TINYINT UNSIGNED NOT NULL DEFAULT 1,
+   PRIMARY KEY(`created`,`run`)
+) ENGINE Innodb CHARACTER SET utf8 COLLATE utf8_bin
+  COMMENT 'Master switch to enable/disable run';
+
+
 CREATE TABLE IF NOT EXISTS `schemata` (
   `schema_id` SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `schema_name` VARCHAR(64) NOT NULL,

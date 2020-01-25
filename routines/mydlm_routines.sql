@@ -871,7 +871,7 @@ BEGIN
   FROM
    (SELECT 1
     FROM `mydlm`.`queue` q
-    WHERE j.`job_id` = _job_id
+    WHERE q.`job_id` = _job_id
       AND q.runtime < _runtime
     UNION
     SELECT 1
@@ -946,6 +946,50 @@ END //
 DELIMITER ;
 
 
+/*
+ ACTIVATE/DEACTIVATE mydlm via a toggle
+*/
+DROP PROCEDURE IF EXISTS `toggle_active`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `toggle_active` (
+  OUT _row_count TINYINT UNSIGNED)
+DETERMINISTIC
+SQL SECURITY INVOKER 
+MODIFIES SQL DATA
+BEGIN
+  INSERT INTO `mydlm`.`control`
+    SELECT NULL, NOT `run`
+    FROM `mydlm`.`control`
+    ORDER BY `created` DESC LIMIT 1; 
+
+  SET _row_count = ROW_COUNT();
+END //
+
+DELIMITER ;
+
+/*
+ Master control test for mydlm
+*/
+DROP FUNCTION IF EXISTS `is_active`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' FUNCTION `is_active` ()
+RETURNS BOOLEAN
+SQL SECURITY INVOKER 
+READS SQL DATA
+BEGIN
+  DECLARE rtn BOOLEAN;
+  SELECT `run` INTO `rtn` 
+  FROM `mydlm`.`control`
+  ORDER BY `created` DESC
+  LIMIT 1;
+
+  RETURN `rtn`;
+END //
+
+DELIMITER ;
+
+
+
 /* get the next runnable job. Update the semaphore,
  * and run it. When  finished, update the history and
  * delete the item from the queue and commit the work. 
@@ -987,6 +1031,10 @@ main:BEGIN
     RESIGNAL;
   END;
   
+  IF (SELECT `mydlm`.`is_active`()) = FALSE THEN
+    LEAVE main;
+  END IF;
+
   SET @query = NULL;
   SET _started = SYSDATE();
 
