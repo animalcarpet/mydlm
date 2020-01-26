@@ -720,7 +720,7 @@ SQL SECURITY INVOKER
 MODIFIES SQL DATA
 BEGIN
   DELETE FROM `mydlm`.`schemata`
-  WHERE s.`schema_id` = _schema_id;
+  WHERE `schema_id` = _schema_id;
 
   SET _row_count = ROW_COUNT();
 END //
@@ -782,6 +782,24 @@ BEGIN
 END //
 DELIMITER ;
 
+DROP PROCEDURE IF EXISTS `delete_queue`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `delete_queue`(
+  IN _job_id INTEGER UNSIGNED,
+  IN _runtime DATETIME,
+  OUT _row_count TINYINT UNSIGNED)
+DETERMINISTIC
+SQL SECURITY INVOKER 
+MODIFIES SQL DATA
+BEGIN
+  DELETE FROM `mydlm`.`queue`
+  WHERE `job_id`  = _job_id
+  AND `runtime` = _runtime;
+
+  SET _row_count = ROW_COUNT();
+END //
+DELIMITER ;
+
 
 -- OPERATIONAL
 -- ******************************************************************************************
@@ -809,17 +827,27 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `queue_job`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `queue_job`(
-  _job_id INTEGER UNSIGNED,
-  _runtime DATETIME)
+  IN _job_id INTEGER UNSIGNED,
+  IN _runtime DATETIME,
+  OUT _row_count TINYINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
 MODIFIES SQL DATA
 COMMENT 'Put a job instance on the queue'
 BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    ROLLBACK;
+    SET _row_count = 0;
+  END;
+
   START TRANSACTION;
-    INSERT INTO `mydlm`.`queue` VALUES (`_job_id`,`_runtime`);   
-    INSERT INTO `mydlm`.`history` VALUES (`_job_id`,`_runtime`);   
+    INSERT INTO `mydlm`.`queue` (`job_id`,`runtime`) VALUES (_job_id,_runtime);
+    SET _row_count = ROW_COUNT();
+    INSERT INTO `mydlm`.`history` (`job_id`,`runtime`) VALUES (_job_id,_runtime);   
+    SET _row_count = _row_count + ROW_COUNT();
   COMMIT;
+
 END //
 DELIMITER ;
 
@@ -942,6 +970,7 @@ BEGIN
   WHERE `runtime` = DATE_FORMAT(NOW(),'%Y-%m-%d %H:%i:00');
   
   COMMIT;
+
 END //
 DELIMITER ;
 
@@ -1091,7 +1120,7 @@ main:BEGIN
 END //
 DELIMITER ;
 
-
+-- this should return 2
 DROP PROCEDURE IF EXISTS `dequeue_job`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `dequeue_job` (
@@ -1102,7 +1131,9 @@ DETERMINISTIC
 SQL SECURITY INVOKER 
 MODIFIES SQL DATA
 BEGIN
-  DELETE FROM `mydlm`.`queue`
+  DELETE q,h
+  FROM `mydlm`.`queue` q
+  JOIN `mydlm`.history h USING(job_id,runtime)
   WHERE `job_id` = _job_id AND `runtime` = _runtime;
 
   SET _row_count = ROW_COUNT();
