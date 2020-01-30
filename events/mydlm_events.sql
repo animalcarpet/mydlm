@@ -59,3 +59,29 @@ BEGIN
 END //
 
 DELIMITER ;
+
+
+-- RUN THE TABLE STATS CHECK PROCESS
+-- RUN AT 3AM 
+DROP EVENT IF EXISTS `mydlm`.`mydlm_table_stats`;
+DELIMITER //
+CREATE EVENT `mydlm`.`mydlm_table_stats`
+ON SCHEDULE EVERY 1 DAY
+STARTS (TIMESTAMP(CURRENT_DATE) + INTERVAL 1 DAY + INTERVAL 3 HOUR)
+ON COMPLETION PRESERVE
+ENABLE
+COMMENT 'Gather stats on table growth'
+DO
+BEGIN
+  DECLARE EXIT HANDLER FOR SQLEXCEPTION
+  BEGIN
+    RESIGNAL SET MESSAGE_TEXT = 'Event Handler error - table stats';
+  END;
+
+  CALL `mydlm`.`monitor_tables`(@rtn);
+  -- CALL `mydlm`.`monitor_tables_slow`(@rtn);
+
+  SELECT @rtn;
+END //
+
+DELIMITER ;

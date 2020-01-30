@@ -1093,8 +1093,11 @@ main:BEGIN
   SET @query = REPLACE(@query,'@@DATE@@',DATE_FORMAT(_runtime,'%Y%m%d'));
   SET @query = REPLACE(@query,'@@YEARWEEK@@',DATE_FORMAT(_runtime,'%X%V'));
   SET @query = REPLACE(@query,'@@YEARMONTH@@',DATE_FORMAT(_runtime,'%Y%m'));
+  SET @query = REPLACE(@query,'@@MONTH@@',DATE_FORMAT(_runtime,'%m'));
   SET @query = REPLACE(@query,'@@YEAR@@',DATE_FORMAT(_runtime,'%Y'));
   SET @query = REPLACE(@query,'@@TIME@@',DATE_FORMAT(_runtime,'%H%i%s'));
+  SET @query = REPLACE(@query,'@@HOUR@@',DATE_FORMAT(_runtime,'%H'));
+  SET @query = REPLACE(@query,'@@MINUTE@@',DATE_FORMAT(_runtime,'%i'));
 
   PREPARE _stmt FROM @query;
   IF LOCATE('?', @query) > 0 THEN
@@ -1277,7 +1280,7 @@ DELIMITER ;
 -- GET ROWS PER TABLE
 DROP PROCEDURE IF EXISTS `monitor_tables`; 
 DELIMITER //
-CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `monitor_tables`()
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `monitor_tables`(OUT _row_count BIGINT)
 DETERMINISTIC
 SQL SECURITY INVOKER 
 MODIFIES SQL DATA
@@ -1305,6 +1308,81 @@ BEGIN
   LEFT JOIN `information_schema`.`columns` c
     ON(t.`table_schema` = c.`table_schema` AND t.`table_name` = c.`table_name`
         AND c.`extra` = 'AUTO_INCREMENT');
+
+  SET _row_count = ROW_COUNT(); 
+END //
+DELIMITER ;
+
+-- GET PRECISE ROWS PER TABLE
+DROP PROCEDURE IF EXISTS `monitor_tables_slow`; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `monitor_tables_slow`(OUT _row_count BIGINT)
+DETERMINISTIC
+SQL SECURITY INVOKER 
+MODIFIES SQL DATA
+BEGIN
+  DECLARE _sname, _tname VARCHAR(64);
+  DECLARE _done BOOLEAN DEFAULT FALSE;
+
+  DECLARE cur CURSOR FOR 
+   SELECT s.`schema_name`, t.`table_name`  
+   FROM `mydlm`.`schemata` s
+   JOIN `mydlm`.`tables` t USING(`schema_id`)
+   JOIN `information_schema`.`tables` i 
+     ON (i.`table_schema` = s.`schema_name` AND i.`table_name` = t.`table_name`)
+   ORDER by 1 ASC, 2 ASC;
+
+  DECLARE CONTINUE HANDLER FOR NOT FOUND SET _done = TRUE;
+
+  SET _row_count = 0;
+  OPEN cur;
+
+  myloop:LOOP
+   FETCH cur INTO _sname, _tname;  
+
+   IF _done = TRUE THEN
+     CLOSE cur;
+     LEAVE myloop;
+   END IF;
+
+   SET @rows = 0;
+   SET @stmt = NULL;
+
+   SET @stmt = CONCAT('SELECT COUNT(*) INTO @rows FROM `', _sname, '`.`', _tname, '`;'); 
+
+   PREPARE stmt FROM @stmt;
+   EXECUTE stmt;
+   DEALLOCATE PREPARE stmt;
+
+   INSERT INTO `mydlm`.`monitor`(`table_id`,`table_rows`,`auto_increment`,`keyspace`)
+   SELECT m.`table_id`, @rows, t.`auto_increment`,
+     CASE c.`data_type`
+       WHEN 'TINYINT' THEN ROUND(t.`auto_increment` /
+         IF(c.`column_type` LIKE '%unsigned',255,127),2)
+       WHEN 'SMALLINT' THEN ROUND(t.`auto_increment` /
+         IF(c.`column_type` LIKE '%unsigned',65535,32767),2)
+       WHEN 'MEDIUMINT' THEN ROUND(t.`auto_increment` /
+         IF(c.column_type LIKE '%unsigned',16777215,8388607),2)
+      WHEN 'INT' THEN ROUND(t.`auto_increment` /
+         IF(c.`column_type` LIKE '%unsigned',4294967295,2147483647),2)
+      WHEN 'BIGINT' THEN ROUND(t.auto_increment /
+         IF(c.`column_type` LIKE '%unsigned',18446744073709551615,9223372036854775807),2)
+      ELSE 0
+    END AS 'keyspace'
+  FROM `mydlm`.`tables` m
+  JOIN `mydlm`.`schemata` s
+    ON(m.`schema_id` = s.`schema_id`)
+  JOIN `information_schema`.`tables` t
+    ON(s.`schema_name` = t.`table_schema` AND m.`table_name` = t.`table_name`)
+  LEFT JOIN `information_schema`.`columns` c
+    ON(t.`table_schema` = c.`table_schema` AND t.`table_name` = c.`table_name`
+        AND c.`extra` = 'AUTO_INCREMENT')
+  WHERE t.`table_schema` = _sname AND t.`table_name` = _tname;
+
+  SET _row_count = _row_count + 1;
+
+  END LOOP;
+
 END //
 DELIMITER ;
 
@@ -1323,6 +1401,31 @@ BEGIN
    JOIN `mydlm`.`tables` t USING (`schema_id`)
    JOIN `mydlm`.`monitor` m USING (`table_id`)
    WHERE m.`table_id` = _table_id;
+END //
+DELIMITER ;
+
+
+-- get the last record for each table
+DROP PROCEDURE IF EXISTS get_monitor_data_by_schema; 
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE get_monitor_data_by_schema(
+  _schema_id SMALLINT UNSIGNED)
+SQL SECURITY INVOKER 
+READS SQL DATA
+BEGIN
+
+  SELECT s.`schema_name`, t.`table_name`, m.`table_rows`,
+    m.`auto_increment`, m.`keyspace`, m.`created`
+  FROM `mydlm`.`schemata` s
+  JOIN `mydlm`.`tables` t USING (`schema_id`)
+  JOIN `mydlm`.`monitor` m USING (`table_id`)
+  WHERE s.`schema_id` = _schema_id
+  AND m.created IN ( 
+    SELECT MAX(`created`)
+    FROM `monitor` 
+    GROUP BY `table_id`
+  );
+
 END //
 DELIMITER ;
 
