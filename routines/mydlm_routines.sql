@@ -1095,9 +1095,20 @@ main:BEGIN
   SET @query = REPLACE(@query,'@@YEARMONTH@@',DATE_FORMAT(_runtime,'%Y%m'));
   SET @query = REPLACE(@query,'@@MONTH@@',DATE_FORMAT(_runtime,'%m'));
   SET @query = REPLACE(@query,'@@YEAR@@',DATE_FORMAT(_runtime,'%Y'));
-  SET @query = REPLACE(@query,'@@TIME@@',DATE_FORMAT(_runtime,'%H%i%s'));
+  SET @query = REPLACE(@query,'@@TIME@@',DATE_FORMAT(_runtime,'%H:%i:%s'));
   SET @query = REPLACE(@query,'@@HOUR@@',DATE_FORMAT(_runtime,'%H'));
   SET @query = REPLACE(@query,'@@MINUTE@@',DATE_FORMAT(_runtime,'%i'));
+  SET @query = REPLACE(@query,'@@RUNTIME@@', _runtime);
+  -- relative to begining of stated period
+  SET @query = REPLACE(@query,'@@YESTERDAY@@', DATE_FORMAT(DATE_SUB(_runtime, INTERVAL 1 DAY), '%Y-%m-%d 00:00:00'));
+  SET @query = REPLACE(@query,'@@TODAY@@',DATE_FORMAT(_runtime,'%Y-%m-%d 00:00:00'));
+  SET @query = REPLACE(@query,'@@TOMORROW@@', DATE_FORMAT(DATE_ADD(_runtime, INTERVAL 1 DAY), '%Y-%m-%d 00:00:00'));
+  SET @query = REPLACE(@query,'@@LASTMONTH@@', DATE_FORMAT(DATE_SUB(_runtime, INTERVAL 1 MONTH),'%Y-%m-01 00:00:00'));
+  SET @query = REPLACE(@query,'@@THISMONTH@@', DATE_FORMAT(_runtime,'%Y-%m-01 00:00:00'));
+  SET @query = REPLACE(@query,'@@THISYEAR@@', DATE_FORMAT(_runtime,'%Y-01-01 00:00:00'));
+  SET @query = REPLACE(@query,'@@LASTYEAR@@', DATE_FORMAT(DATE_SUB(_runtime, INTERVAL 1 YEAR),'%Y-01-01 00:00:00'));
+  SET @query = REPLACE(@query,'@@LASTWEEK@@', DATE_FORMAT(DATE_SUB(NOW(),INTERVAL(1 - DAYOFWEEK(NOW())) + 8 DAY),'%Y-%m-%d 00:00:00'));
+  SET @query = REPLACE(@query,'@@THISWEEK@@',DATE_FORMAT(DATE_ADD(_runtime,INTERVAL(1 - DAYOFWEEK(NOW())) DAY),'%Y-%m-%d 00:00:00'));
 
   PREPARE _stmt FROM @query;
   IF LOCATE('?', @query) > 0 THEN

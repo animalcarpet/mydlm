@@ -91,8 +91,26 @@ mydlm contains simple macro substitution which allows components of the schedule
 date to be used when constructing a statement to execute.
 
 The defined macros can be used anyhere within a statement and are always defined in reference to 
-the job runtime value rather than the current datetime.
+the job runtime value rather than the current datetime. The macros can be categorised into those
+which extract a date part from the runtime of a job and those that define the start of a period
+relative to the job's runtime value. When using the latter category you can define a period between
+two macros, so the previous month would be defined as
 
+```
+`datetime` >= @@LASTMONTH@@ AND `datetime` < @@THISMONTH@@ 
+```
+
+which would be equivalent to 
+
+```
+`datetime` >= DATE_FORMAT(DATE_SUB(@runtime, INTERVAL 1 MONTH),'%Y-%m-01 00:00:00') AND 
+`datetime` < DATE_FORMAT(@runtime,'%Y-%m-01 00:00:00') 
+```
+
+Those macros defining periods always align with the very start of the period (e.g. midnight on the
+1st of the month, midnight on the 1st of January etc.).
+
+Date Part
 * @@RUNTIME@@ 
 * @@DATE@@ (@@TODAY@@)
 * @@YEARWEEK@@
@@ -102,6 +120,8 @@ the job runtime value rather than the current datetime.
 * @@TIME@@
 * @@HOUR@@
 * @@MINUTE@@
+
+Period Definition
 * @@LASTYEAR@@
 * @@NEXTYEAR@@
 * @@LASTMONTH@@
@@ -248,20 +268,10 @@ processes.
 ### Monitoring
 As well as managing the data within the table, mydlm also provides routines to monitor
 the number of rows in the table, the use of auto_increment keys, growth in the number
-of records over different periods and also to track the fastest growing tables.
+of records over different time periods and will also to track the fastest growing tables.
 
-Statistics are gathered Data is collected using a daily EVENT `mydlm_table_stats`. This
+Statistics are gathered using a daily EVENT `mydlm_table_stats`. This
 EVENT will then call a procedure `mydlm`.`monitor_stats` to populate the `monitor` table. 
-
-Row counts are estimates from `information_schema`.`tables` as counting actual rows
-would be too slow for very large tables. MYISAM tables will return a precise count of 
-the rows, INNODB tables might be out by several percent and are the index statistics that 
-the optimizer uses for deciding the optimal way to run queries against a table. The point 
-of this feature is to get an overall impression of the number of rows, the precise figure
-is usually of secondary importance. If precise counts are desired there is an alternate
-version of the stats gathering procedure `monitor_tables_slow` which will count rows in
-each monitored table individually - N.B. this procedure could be very slow on larger 
-systems.
 
 The `mydlm_table_stats` event has been defined to run once a day at 3am. This can be 
 changed to any time or interval you wish by dropping the current event and changing its
@@ -273,6 +283,20 @@ you could use the following definition.
 ON SCHEDULE EVERY 1 HOUR
 ON COMPLETION PRESERVE
 ```
+
+Row counts are estimates from `information_schema`.`tables` as counting actual rows
+can be too slow for very large tables. MYISAM tables will return a precise count of 
+the rows, INNODB tables might be out by several percent in the same manner as index
+statistics that the optimizer uses for deciding the optimal way to run queries. The point 
+of this feature is to get an overall impression of the growth in the number of rows, 
+the precise figure is usually of secondary importance. If precise counts are desired 
+there is an alternate version of the stats gathering procedure `monitor_tables_slow`
+which will count rows in each monitored table individually - Note this procedure 
+could be very slow on larger systems. Only tables that have been imported into
+the system will be monitored, if a DLM process has been defined for a table it will
+be included within monitoring without additional work, other tables can be included
+without a DLM process if required.
+
 
 ### Events
 mydlm uses MySQL's EVENTS to automate the selection and running of jobs.
