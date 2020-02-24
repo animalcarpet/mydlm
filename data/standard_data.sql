@@ -15,8 +15,8 @@ VALUES (1,'One-off'),
        (3,'Archive'),
        (4,'Summarize'),
        (5,'DDL'),
-       (6,'Update'),
-       (7,'Ad hoc');
+       (6,'Update');
+
 
 
 INSERT INTO `mydlm`.`control` (`created`,`run`) 
