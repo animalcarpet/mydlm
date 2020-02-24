@@ -16,7 +16,7 @@ BEGIN
   SELECT `schema_name`
   FROM `information_schema`.`schemata` s
   WHERE s.`schema_name`
-    NOT IN ('mysql','mydlm','information_schema','sys','performance_schema');
+    NOT IN ('mysql','mydlm','mytap','information_schema','sys','performance_schema');
 
   SET _row_count = ROW_COUNT();
 END //
@@ -26,13 +26,13 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `import_tables`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `import_tables`(
-  _schema_name VARCHAR(64),
-  _row_count SMALLINT UNSIGNED)
+  IN _schema_name VARCHAR(64),
+  OUT _row_count SMALLINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
 MODIFIES SQL DATA
 BEGIN
-  INSERT INTO `mydlm`.`tables` (`table_name`,`schema_id`)
+  INSERT IGNORE INTO `mydlm`.`tables` (`table_name`,`schema_id`)
   SELECT t.`table_name`, s.`schema_id`
   FROM `information_schema`.`tables` t
   JOIN `mydlm`.`schemata` s ON (t.`table_schema` = s.`schema_name`)
@@ -47,9 +47,9 @@ DELIMITER ;
 DROP PROCEDURE IF EXISTS `import_table`; 
 DELIMITER //
 CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `import_table`(
-  _schema_name VARCHAR(64),
-  _table_name VARCHAR(64),
-  _row_count SMALLINT UNSIGNED)
+  IN _schema_name VARCHAR(64),
+  IN _table_name VARCHAR(64),
+  OUT _row_count SMALLINT UNSIGNED)
 DETERMINISTIC
 SQL SECURITY INVOKER 
 MODIFIES SQL DATA
@@ -137,7 +137,12 @@ SQL SECURITY INVOKER
 READS SQL DATA
 BEGIN
   SELECT `job_id`, q.`runtime`, s.`schema_name`, t.`table_name`,
-    j.`job_name`, jt.`job_type_name`,`semaphore`
+    j.`job_name`, jt.`job_type_name`,`semaphore`,
+    CASE `active` 
+      WHEN -1 THEN 'Suspended'
+      WHEN 0 THEN 'Inactive'
+      WHEN 1 THEN 'Active'
+    END AS 'active'
    FROM `mydlm`.`queue` q
    JOIN `mydlm`.`jobs` j USING(`job_id`)
    JOIN `mydlm`.`job_types` jt USING(`job_type_id`)
@@ -867,7 +872,10 @@ SQL SECURITY INVOKER
 MODIFIES SQL DATA
 BEGIN
   START TRANSACTION;
-    DELETE FROM `mydlm`.`queue` WHERE `job_id` = _job_id AND `runtime` = _runtime;   
+    -- leave a job on the queue if it errors
+    IF _error IS NULL OR  _error = '' THEN
+      DELETE FROM `mydlm`.`queue` WHERE `job_id` = _job_id AND `runtime` = _runtime;   
+    END IF;
 
     UPDATE `mydlm`.`history` SET
     `rows_affected` = _rows_affected,
@@ -912,6 +920,12 @@ BEGIN
     FROM `mydlm`.`jobs` j
     WHERE j.`job_id` = _job_id
       AND j.`active` != 1
+    UNION
+    SELECT 1
+    FROM `mydlm`.`jobs` j
+    JOIN `mydlm`.`jobs` j2 ON(j2.`job_id` = j.`depends`)
+    WHERE j.`job_id` = _job_id
+      AND j2.`active` != 1
    ) der;
   
   RETURN IF (rtn = 0 , TRUE, FALSE);  
@@ -1099,6 +1113,7 @@ main:BEGIN
   SET @query = REPLACE(@query,'@@HOUR@@',DATE_FORMAT(_runtime,'%H'));
   SET @query = REPLACE(@query,'@@MINUTE@@',DATE_FORMAT(_runtime,'%i'));
   SET @query = REPLACE(@query,'@@RUNTIME@@', _runtime);
+  SET @query = REPLACE(@query,'@@RUNTIMESTAMP@@', DATE_FORMAT(_runtime,'%Y%m%d%H%i%s'));
   -- relative to begining of stated period
   SET @query = REPLACE(@query,'@@YESTERDAY@@', DATE_FORMAT(DATE_SUB(_runtime, INTERVAL 1 DAY), '%Y-%m-%d 00:00:00'));
   SET @query = REPLACE(@query,'@@TODAY@@',DATE_FORMAT(_runtime,'%Y-%m-%d 00:00:00'));
@@ -1153,6 +1168,29 @@ BEGIN
   SET _row_count = ROW_COUNT();
 END //
 DELIMITER ;
+
+
+-- this should return zero or a multiple of 2
+-- removes all queue and history instances for deactived job
+DROP PROCEDURE IF EXISTS `dequeue_job_all`;
+DELIMITER //
+CREATE DEFINER='dlmadmin'@'localhost' PROCEDURE `dequeue_job_all` (
+  IN _job_id INTEGER UNSIGNED,
+  OUT _row_count TINYINT UNSIGNED)
+DETERMINISTIC
+SQL SECURITY INVOKER
+MODIFIES SQL DATA
+BEGIN
+  DELETE q,h
+  FROM `mydlm`.`queue` q
+  JOIN `mydlm`.history h USING(job_id,runtime)
+  WHERE `job_id` = _job_id 
+  AND h.`finished` IS NULL;
+
+  SET _row_count = ROW_COUNT();
+END //
+DELIMITER ;
+
 
 
 DROP PROCEDURE IF EXISTS `deactivate_job`; 
