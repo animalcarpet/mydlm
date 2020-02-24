@@ -250,10 +250,9 @@ SELECT tap.eq((SELECT job_id,active
 
 -- tidy up records
 SET FOREIGN_KEY_CHECKS = 0;
-DELETE FROM `mydlm`.`schemata` WHERE `schema_name` LIKE 'mydlm_test%';
-DELETE FROM `mydlm`.`tables` WHERE `table_name` LIKE 'mydlm_test%';
-DELETE h FROM `mydlm`.`history` h JOIN `mydlm`.`jobs` j WHERE j.`job_name` LIKE 'mydlm_test%';
-DELETE FROM `mydlm`.`jobs` WHERE `job_name` LIKE 'mydlm_test%';
+DELETE s,t FROM `mydlm`.`schemata` s JOIN `mydlm`.`tables` t USING(`schema_id`) WHERE s.`schema_name` LIKE 'mydlm_test%';
+UPDATE `mydlm`.`jobs` SET `depends` = NULL;
+DELETE j,q,h FROM `mydlm`.`jobs` j JOIN `mydlm`.`history` h USING(`job_id`) JOIN `mydlm`.`queue` q USING(`job_id`) WHERE j.`job_name` LIKE 'mydlm_test%';
 SET FOREIGN_KEY_CHECKS = 1;
 
 DROP DATABASE IF EXISTS `mydlm_test_1`;
