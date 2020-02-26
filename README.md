@@ -1,7 +1,7 @@
 # mydlm
 
 ## General
-A Data Lifetime Management (DLM) tool for MySQL.
+A Data Lifecycle Management (DLM) tool for MySQL.
 
 Note: This code is not yet production ready. I'll be adding a suite of tests and some
 additional monitoring reports before it reaches that state.
@@ -11,18 +11,18 @@ data in MySQL, in fact any repeated task for the proper stewardship of data over
 within your MySQL databases. At present, the codebase only covers the backend tasks
 and is implemented as MySQL stored procedures and events. mydlm can be run entirely through
 these backend process, however, much of the administration and the monitoring would
-be considerably easier with a suitable front interface calling and consuming these
+be considerably easier with a suitable frontend interface calling and consuming these
 procedures.
 
 Data is managed by jobs that define the type, dependencies, payload and schedule for
-running and monitoring DLM tasks. A job may have as its payload any single SQL
-statement. More complex tasks can be defined either as a stored procedure
+running and monitoring DLM tasks. A job will have as its payload any single SQL
+statement. More complex tasks can be defined either as within a stored procedure
 or as a series of dependent jobs. Jobs can be dependent on the completion of other jobs and
 are always dependent on those with the same definition, this ensures that they always
-run in sequence and that only one instance of that particular task can can be running
-at a given time. So, an archiving task might be dependent on a DDL task to create
-the table the data will be archived to, and a subsequent deletion might be dependent on
-the archiving task being completed.
+run in sequence and that only one instance of that particular task can be running
+at a given time. Thus, an archiving task might be dependent on a DDL task to create
+the table the data will be archived to, and a subsequent deletion dependent on
+the archiving task being successfully completed.
 
 A table may have multiple jobs associated with it. These jobs may cover any one
 or all the defined types i.e. summarisation, archiving, pruning, DDL, updates
@@ -266,9 +266,9 @@ the `job_type` when calculating the number of rows that have been subject to DML
 processes.
 
 ### Monitoring
-As well as managing the data within the table, mydlm also provides routines to monitor
+As well as managing the lifecycle of data within your tables, mydlm also provides routines to monitor
 the number of rows in the table, the use of auto_increment keys, growth in the number
-of records over different time periods and will also to track the fastest growing tables.
+of records over different time periods, and will also to track the fastest growing tables.
 
 Statistics are gathered using a daily EVENT `mydlm_table_stats`. This
 EVENT will then call a procedure `mydlm`.`monitor_stats` to populate the `monitor` table. 
@@ -311,7 +311,7 @@ as appropriate.
 
 The activation check EVENT tests to see whether a job should be considered 'active'
 because the data has aged sufficiently to have reached its data retention threshold.
-It dose this by testing a timestamp of the oldest record. If the threshold has
+It does this by testing a timestamp of the oldest record. If the threshold has
 passed the job is set 'active' and will be queued to run against the defined schedule.
 
 
@@ -320,7 +320,7 @@ mydlm can be used in replication environments where the replication format is se
 either ROW or MIXED. Install the pacage on the master and the schema, procedures and
 evevents will replicate to the slaves. The events will be naturally set to 'SLAVESIDE
 DISABLED' so the events will only run on the master. Note, you cannot use mydlm with 
-STATEMENT based replication and you will get an error when you try to import the 
+STATEMENT based replication as you will get an error when you try to import the 
 procedures because some of them are non-deterministic because of the use of time and 
 date functions.
 
